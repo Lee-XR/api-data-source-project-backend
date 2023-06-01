@@ -3,8 +3,9 @@
 
 require_once(__DIR__ . '/../vendor/autoload.php');
 
-$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/');
-$dotenv->load();
+// $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/');
+// $dotenv->load();
+
 $origin = $_ENV['NODE_ENV'] === 'production' ? $_ENV['PROD_ORIGIN_URL'] : $_ENV['DEV_ORIGIN_URL'];
 $api_key = $_ENV['SKIDDLE_API_KEY'];
 
