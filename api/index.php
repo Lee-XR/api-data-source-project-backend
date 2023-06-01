@@ -19,6 +19,10 @@ $id = isset($requestBody['id']) ? $requestBody['id'] : null;
 $params = isset($requestBody['params']) ? $requestBody['params'] : null;
 
 try {
+    if ($_SERVER['HTTP_ORIGIN'] !== $origin) {
+        throw new Exception('Direct access not allowed.');
+    }
+
     if (empty($api_key)) {
         throw new Exception('No API key found.');
     }
