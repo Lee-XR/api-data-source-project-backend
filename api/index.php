@@ -8,31 +8,41 @@ require_once(__DIR__ . '/../vendor/autoload.php');
 // $dotenv->load();
 
 $origin = $_ENV['NODE_ENV'] === 'production' ? $_ENV['PROD_ORIGIN_URL'] : $_ENV['DEV_ORIGIN_URL'];
-$api_key = $_ENV['SKIDDLE_API_KEY'];
+
+// Prevent direct access
+if ($_SERVER['HTTP_ORIGIN'] !== $origin) {
+    http_response_code(401);
+    $error = ['error' => 'Direct access not allowed.'];
+    $response = json_encode($error);
+    echo $response;
+    exit();
+}
 
 header('Access-Control-Allow-Origin: ' . $origin);
 header('Access-Control-Allow-Methods: POST');
 header('Access-Control-Allow-Headers: Content-Type, x-requested-with');
 
-$requestBody = json_decode(file_get_contents('php://input'), true);
-$type = isset($requestBody['type']) ? $requestBody['type'] : null;
-$id = isset($requestBody['id']) ? $requestBody['id'] : null;
-$params = isset($requestBody['params']) ? $requestBody['params'] : null;
-
 try {
-    if ($_SERVER['HTTP_ORIGIN'] !== $origin) {
-        throw new Exception('Direct access not allowed.');
+    // Get JSON body data from POST request
+    $requestBody = json_decode(file_get_contents('php://input'), true);
+    if (empty($requestBody)) {
+        throw new Exception('Request body is empty.');
     }
 
-    if (empty($api_key)) {
-        throw new Exception('No API key found.');
-    }
-
+    $type = isset($requestBody['type']) ? $requestBody['type'] : null;
+    $id = isset($requestBody['id']) ? $requestBody['id'] : null;
+    $params = isset($requestBody['params']) ? $requestBody['params'] : null;
     if (empty($type)) {
         throw new Exception('No search type is provided.');
     }
 
-    // Authentication using Skiddle API key
+    // Validate if API key exists
+    $api_key = $_ENV['SKIDDLE_API_KEY'];
+    if (empty($api_key)) {
+        throw new Exception('No API key found.');
+    }
+
+    // Authenticate using Skiddle API key
     try {
         $session = new SkiddleSDK\SkiddleSession(['api_key' => $api_key]);
     } catch (SkiddleSDK\SkiddleException $e) {
@@ -65,7 +75,7 @@ try {
     }
 
 } catch(Exception $e) {
-    $error = $e->getMessage();
+    $error = ['error' => $e->getMessage()];
     $response = json_encode($error);
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
