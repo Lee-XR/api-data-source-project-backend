@@ -4,5 +4,8 @@
 # Vercel
 .vercel
 
+# npm
+node_modules
+
 # Environment files
 .env
