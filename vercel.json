@@ -1,13 +1,13 @@
 {
     "functions": {
-		"api/*.php": {
+		"api/skiddle-php/*.php": {
 			"runtime": "vercel-php@0.5.3"
 		}
 	},
 	"rewrites": [
 		{
-			"source": "/(.*)",
-			"destination": "/api/index.php"
+			"source": "/skiddle/(.*)",
+			"destination": "/api/skiddle-php/index.php"
 		}
 	],
 	"headers": [

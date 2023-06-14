@@ -1,11 +1,11 @@
 <?php
 // phpinfo();
 
-require_once(__DIR__ . '/../vendor/autoload.php');
+require_once(__DIR__ . '/../../vendor/autoload.php');
 
 /* Disable during production */
-// $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/');
-// $dotenv->load();
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/');
+$dotenv->load();
 
 $origin = $_ENV['NODE_ENV'] === 'production' ? $_ENV['PROD_ORIGIN_URL'] : $_ENV['DEV_ORIGIN_URL'];
 
@@ -66,7 +66,6 @@ try {
                 $class->addCond($key, $value);
             }
         }
-
         $data = isset($id) ? $class->getListing($id) : $class->getListings();
         $response = json_encode($data);
 
