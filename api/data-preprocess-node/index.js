@@ -1,9 +1,13 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
+import dotenv from 'dotenv';
+import express from 'express';
+import cors from 'cors';
 
+import { router as apiRoutes } from './routes/apiRoutes.js';
+import { returnError } from './middleware/errorHandler.js';
+
+dotenv.config();
 const app = express();
-const port = process.env.DATA_PREPROCESS_NODE_PORT || 3000;
+const port = process.env.PORT || 3000;
 app.use(express.json());
 
 // cors configuration
@@ -17,16 +21,11 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 // routes
-app.get('/', (req, res) => {
-	res.json({ msg: 'Hello World' });
-});
+app.use('/api', apiRoutes);
 
-app.post('/data', (req, res) => {
-	const { data } = req.body;
-    
-	res.json({ msg: 'Request body POST', data });
-});
+// error handler middleware
+app.use(returnError);
 
 app.listen(port, () => {
-	console.log(`Connected to data-preprocess-node backend at port ${port}`);
+	console.log(`Server listening on port ${port}`);
 });
