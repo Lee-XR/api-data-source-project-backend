@@ -3,9 +3,9 @@
 
 require_once(__DIR__ . '/../../vendor/autoload.php');
 
-/* Disable during production */
-$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../../');
-$dotenv->load();
+/* Disable $dotenv during production */
+// $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../../');
+// $dotenv->load();
 
 $origin = $_ENV['NODE_ENV'] === 'production' 
             ? $_ENV['PROD_SKIDDLE_SDK_ORIGIN_URL'] 
