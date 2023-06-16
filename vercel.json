@@ -12,11 +12,5 @@
 			"source": "/(.*)",
 			"destination": "/api/data-process-node/index.js"
 		}
-	],
-	"redirects": [
-		{
-			"source": "/api/skiddle-api-php/(.*)",
-			"destination": "/api/skiddle-api-php/index.php"
-		}
 	]
 }
