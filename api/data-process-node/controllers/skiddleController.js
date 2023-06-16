@@ -35,9 +35,9 @@ async function multiFetchSkiddle(totalCount, firstLimit, firstOffset, reqBody) {
 		};
 
 		const promise = new Promise((resolve) => {
-			setTimeout(() => {
-				resolve(singleFetchSkiddle({ ...reqBody, params: paramsOffset }));
-			}, 500 * num);
+			resolve(singleFetchSkiddle({ ...reqBody, params: paramsOffset }));
+			// setTimeout(() => {
+			// }, 500 * num);
 		});
 
 		promises.push(promise);
