@@ -4,7 +4,7 @@ async function singleFetchSkiddle(reqBody) {
 	/* Set prod variable value as `https://${process.env.VERCEL_URL}/api/skiddle-api-php`, INCLUDE single-quotes */
 	const url =
 		process.env.NODE_ENV === 'production'
-			? `https://${process.env.VERCEL_BRANCH_URL}/api/skiddle-api-php`
+			? `https://${process.env.VERCEL_BRANCH_URL}/api/skiddle-api-php/`
 			: process.env.SKIDDLE_SDK_URL_DEV;
 
 	const data = {
@@ -37,7 +37,7 @@ async function multiFetchSkiddle(totalCount, firstLimit, firstOffset, reqBody) {
 		const promise = new Promise((resolve) => {
 			setTimeout(() => {
 				resolve(singleFetchSkiddle({ ...reqBody, params: paramsOffset }));
-			}, 2000 * num);
+			}, 500 * num);
 		});
 
 		promises.push(promise);
