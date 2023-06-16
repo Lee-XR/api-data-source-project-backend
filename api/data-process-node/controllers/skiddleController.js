@@ -1,10 +1,12 @@
 import axios from 'axios';
 
 async function singleFetchSkiddle(reqBody) {
-	const url =
-		process.env.NODE_ENV === 'production'
-			? process.env.PROD_SKIDDLE_SDK_URL
-			: process.env.DEV_SKIDDLE_SDK_URL;
+	// const url =
+	// 	process.env.NODE_ENV === 'production'
+	// 		? process.env.PROD_SKIDDLE_SDK_URL
+	// 		: process.env.DEV_SKIDDLE_SDK_URL;
+
+	const url = `https://${process.env.VERCEL_BRANCH_URL}/api/skiddle-api-php`;
 
 	const data = {
 		...reqBody,
