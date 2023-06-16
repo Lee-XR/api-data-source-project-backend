@@ -1,6 +1,6 @@
 {
     "functions": {
-		"api/skiddle-php/*.php": {
+		"api/skiddle-api-php/*.php": {
 			"runtime": "vercel-php@0.5.3"
 		},
 		"api/data-process-node/*.js": {
