@@ -1,6 +1,7 @@
 import axios from 'axios';
 
 async function singleFetchSkiddle(reqBody) {
+	/* Set prod variable value as 'https://${process.env.VERCEL_URL}/api/skiddle-api-php', INCLUDE single-quotes */
 	const url =
 		process.env.NODE_ENV === 'production'
 			? process.env.SKIDDLE_SDK_URL_PROD
@@ -53,6 +54,8 @@ export async function getSkiddleData(req, res, next) {
 	const firstOffset = params.offset || 0;
 	let totalCount = 0;
 	let allRecords = [];
+
+	res.json({success: 'true', message: 'Reached here'});
 
 	const firstFetch = singleFetchSkiddle(req.body);
 
