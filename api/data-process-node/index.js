@@ -14,8 +14,8 @@ app.use(express.json());
 const corsOptions = {
 	origin:
 		process.env.NODE_ENV === 'production'
-			? process.env.PROD_ORIGIN_URL
-			: process.env.DEV_ORIGIN_URL,
+			? process.env.ORIGIN_URL_PROD
+			: process.env.ORIGIN_URL_DEV,
 	methods: ['GET', 'POST'],
 };
 app.use(cors(corsOptions));
