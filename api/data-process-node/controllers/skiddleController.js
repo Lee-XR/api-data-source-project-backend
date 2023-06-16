@@ -55,8 +55,6 @@ export async function getSkiddleData(req, res, next) {
 	let totalCount = 0;
 	let allRecords = [];
 
-	res.json({success: 'true', message: 'Reached here'});
-
 	const firstFetch = singleFetchSkiddle(req.body);
 
 	return await firstFetch.then(
