@@ -3,7 +3,7 @@ import { cwd } from 'node:process';
 import axios from 'axios';
 
 async function singleFetchSkiddle(reqBody) {
-	const url = path.resolve(cwd(), 'api/skiddle-api/php');
+	const url = path.resolve(cwd(), 'api/skiddle-api-php/');
 
 	const data = {
 		...reqBody,
