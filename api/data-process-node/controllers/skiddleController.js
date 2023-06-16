@@ -2,7 +2,12 @@ import path from 'path';
 import axios from 'axios';
 
 async function singleFetchSkiddle(reqBody) {
-	const url = path.resolve(process.cwd(), 'api/skiddle-api-php');
+	// const url = path.resolve(process.cwd(), 'api/skiddle-api-php');
+
+	const url =
+		process.env.NODE_ENV === 'production'
+			? `https://${process.env.VERCEL_BRANCH_URL}/api/skiddle-api-php`
+			: process.env.SKIDDLE_SDK_URL_DEV;
 
 	const data = {
 		...reqBody,
@@ -79,10 +84,10 @@ export async function getSkiddleData(req, res, next) {
 				);
 			}
 
-			res.json({totalHits: totalCount, records: allRecords});
+			res.json({ totalHits: totalCount, records: allRecords });
 		},
 		(error) => {
-			next(error);	
+			next(error);
 		}
 	);
 }
