@@ -1,12 +1,9 @@
-import path from 'path';
 import axios from 'axios';
 
 async function singleFetchSkiddle(reqBody) {
-	// const url = path.resolve(process.cwd(), 'api/skiddle-api-php');
-
 	const url =
 		process.env.NODE_ENV === 'production'
-			? `https://${process.env.VERCEL_BRANCH_URL}/api/skiddle-api-php`
+			? process.env.SKIDDLE_SDK_URL_PROD
 			: process.env.SKIDDLE_SDK_URL_DEV;
 
 	const data = {
