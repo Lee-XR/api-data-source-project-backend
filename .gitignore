@@ -1,11 +1,11 @@
 # PHP
-/vendor
-
-# Vercel
-.vercel
+vendor
 
 # npm
 node_modules
+
+# Vercel
+.vercel
 
 # Environment files
 .env

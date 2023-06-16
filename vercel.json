@@ -2,31 +2,15 @@
     "functions": {
 		"api/skiddle-php/*.php": {
 			"runtime": "vercel-php@0.5.3"
+		},
+		"api/data-process-node/*.js": {
+			"runtime": "@vercel/node"
 		}
 	},
 	"rewrites": [
 		{
-			"source": "/skiddle/(.*)",
-			"destination": "/api/skiddle-php/index.php"
-		}
-	],
-	"headers": [
-		{
-			"source": "/(.*)",
-			"headers": [
-				{
-					"key": "Access-Control-Allow-Origin",
-					"value": "https://api-data-source-project.vercel.app"
-				},
-				{
-					"key": "Access-Control-Allow-Methods",
-					"value": "POST"
-				},
-				{
-					"key": "Access-Control-Allow-Headers",
-					"value": "Content-Type, x-requested-with"
-				}
-			]
+			"source": "/api/(.*)",
+			"destination": "/api/data-process-node/index.js"
 		}
 	]
 }
