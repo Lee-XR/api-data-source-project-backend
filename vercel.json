@@ -29,13 +29,13 @@
 		{
 			"source": "/api/skiddle/(.*)",
 			"headers": [
-				{ "key": "Access-Control-Allow-Methods", "value": "OPTIONS, POST" },
+				{ "key": "Access-Control-Allow-Methods", "value": "OPTIONS, POST" }
 			]
 		},
 		{
 			"source": "/data-process/(.*)",
 			"headers": [
-				{ "key": "Access-Control-Allow-Methods", "value": "GET, OPTIONS, POST" },
+				{ "key": "Access-Control-Allow-Methods", "value": "GET, OPTIONS, POST" }
 			]
 		}
 	]
