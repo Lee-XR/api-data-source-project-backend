@@ -22,20 +22,8 @@
 			"source": "/api/(.*)",
 			"headers": [
 				{ "key": "Access-Control-Allow-Origin", "value": "https://api-data-source-project-git-node-preprocess-lee-xr.vercel.app" },
-				{ "key": "Access-Control-Allow-Methods", "value": "OPTIONS" },
+				{ "key": "Access-Control-Allow-Methods", "value": "OPTIONS, GET, POST" },
 				{ "key": "Access-Control-Allow-Headers", "value": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version" }
-			]
-		},
-		{
-			"source": "/api/skiddle/(.*)",
-			"headers": [
-				{ "key": "Access-Control-Allow-Methods", "value": "OPTIONS, POST" }
-			]
-		},
-		{
-			"source": "/data-process/(.*)",
-			"headers": [
-				{ "key": "Access-Control-Allow-Methods", "value": "GET, OPTIONS, POST" }
 			]
 		}
 	]
