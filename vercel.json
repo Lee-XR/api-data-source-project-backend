@@ -11,10 +11,6 @@
 		{
 			"source": "/api/skiddle/(.*)",
 			"destination": "/api/skiddle-api-php/index.php"
-		},
-		{
-			"source": "/(.*)",
-			"destination": "/api/data-process-node/index.js"
 		}
 	],
 	"headers": [
