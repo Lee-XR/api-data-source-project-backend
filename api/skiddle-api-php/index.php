@@ -15,6 +15,7 @@ header('Access-Control-Allow-Headers: X-CSRF-Token, X-Requested-With, Accept, Ac
 // Allow CORS preflight request
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
+    echo json_encode(['body' => 'OK']);
     exit();
 }
 
