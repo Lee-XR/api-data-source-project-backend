@@ -19,6 +19,12 @@
 	],
 	"headers": [
 		{
+			"source": "/(.*)",
+			"headers": [
+				{ "key": "Access-Control-Allow-Headers", "value": "https://api-data-source-project-git-node-preprocess-lee-xr.vercel.app" }
+			]
+		},
+		{
 			"source": "/api/skiddle/(.*)",
 			"headers": [
 				{ "key": "Access-Control-Allow-Origin", "value": "https://api-data-source-project-git-node-preprocess-lee-xr.vercel.app" },
