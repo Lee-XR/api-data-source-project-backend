@@ -13,7 +13,7 @@
 			"destination": "/api/data-process-node/index.js"
 		},
 		{
-			"source": "/api/skiddle/(.*)",
+			"source": "/skiddle/",
 			"destination": "/api/skiddle-api-php/index.php"
 		}
 	],
