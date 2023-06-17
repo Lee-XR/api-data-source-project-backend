@@ -19,13 +19,7 @@
 	],
 	"headers": [
 		{
-			"source": "/(.*)",
-			"headers": [
-				{ "key": "Access-Control-Allow-Origin", "value": "https://api-data-source-project-git-node-preprocess-lee-xr.vercel.app" }
-			]
-		},
-		{
-			"source": "/api/skiddle/(.*)",
+			"source": "/api/skiddle-api-php/(.*)",
 			"headers": [
 				{ "key": "Access-Control-Allow-Origin", "value": "https://api-data-source-project-git-node-preprocess-lee-xr.vercel.app" },
 				{ "key": "Access-Control-Allow-Methods", "value": "OPTIONS, POST" },
@@ -33,7 +27,7 @@
 			]
 		},
 		{
-			"source": "/data-process/(.*)",
+			"source": "/api/data-process-node/(.*)",
 			"headers": [
 				{ "key": "Access-Control-Allow-Origin", "value": "https://api-data-source-project-git-node-preprocess-lee-xr.vercel.app" },
 				{ "key": "Access-Control-Allow-Methods", "value": "GET, OPTIONS, POST" },
