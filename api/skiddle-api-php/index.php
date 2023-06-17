@@ -1,31 +1,28 @@
 <?php
 // phpinfo();
 
-require_once(__DIR__ . '/../../vendor/autoload.php');
+require_once __DIR__ . '/../../vendor/autoload.php';
+require_once __DIR__ . '/configs/dotenvConfig.php';
 
-/* Disable $dotenv during production */
-// $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../../');
-// $dotenv->load();
-
-$origin = $_ENV['NODE_ENV'] === 'production' 
-            ? $_ENV['SKIDDLE_SDK_ORIGIN_URL_PROD'] 
-            : $_ENV['SKIDDLE_SDK_ORIGIN_URL_DEV'];
+$origin = $_ENV['PHP_ENV'] === 'production'
+            ? $_ENV['ORIGIN_URL_PROD']
+            : $_ENV['ORIGIN_URL_DEV'];
 
 header('Access-Control-Allow-Origin: ' . $origin);
-header('Access-Control-Allow-Methods: POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, x-requested-with');
+header('Access-Control-Allow-Methods: OPTIONS, POST');
+header('Access-Control-Allow-Headers: X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+
+// Allow CORS preflight request
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
 
 try {
     // Get JSON body data from POST request
     $requestBody = json_decode(file_get_contents('php://input'), true);
     if (empty($requestBody)) {
         throw new Exception('Request body is empty.', 500);
-    }
-
-    // Check if POST request made from valid origin
-    $access_key = isset($requestBody['access_key']) ? $requestBody['access_key'] : null;
-    if (empty($access_key)) {
-        throw new Exception('No access allowed.', 403);
     }
 
     $type = isset($requestBody['type']) ? $requestBody['type'] : null;

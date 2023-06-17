@@ -9,15 +9,27 @@
 	},
 	"rewrites": [
 		{
-			"source": "/(.*)",
+			"source": "/api/skiddle/(.*)",
+			"destination": "/api/skiddle-api-php/index.php"
+		},
+		{
+			"source": "/data-process/(.*)",
 			"destination": "/api/data-process-node/index.js"
 		}
 	],
 	"headers": [
 		{
-			"source": "/api/(.*)",
+			"source": "/api/skiddle/(.*)",
 			"headers": [
-				{ "key": "Access-Control-Allow-Origin", "value": "*" },
+				{ "key": "Access-Control-Allow-Origin", "value": "https://api-data-source-project.vercel.app" },
+				{ "key": "Access-Control-Allow-Methods", "value": "OPTIONS, POST" },
+				{ "key": "Access-Control-Allow-Headers", "value": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version" }
+			]
+		},
+		{
+			"source": "/data-process/(.*)",
+			"headers": [
+				{ "key": "Access-Control-Allow-Origin", "value": "https://api-data-source-project.vercel.app" },
 				{ "key": "Access-Control-Allow-Methods", "value": "GET, OPTIONS, POST" },
 				{ "key": "Access-Control-Allow-Headers", "value": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version" }
 			]

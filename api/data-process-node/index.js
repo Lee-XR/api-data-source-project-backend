@@ -2,7 +2,6 @@ import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
 
-import { router as apiRoutes } from './routes/apiRoutes.js';
 import { returnError } from './middleware/errorHandler.js';
 
 dotenv.config();
@@ -16,7 +15,7 @@ const corsOptions = {
 		process.env.NODE_ENV === 'production'
 			? process.env.ORIGIN_URL_PROD
 			: process.env.ORIGIN_URL_DEV,
-	methods: ['GET', 'POST'],
+	methods: ['OPTIONS', 'GET', 'POST'],
 };
 app.use(cors(corsOptions));
 
@@ -25,7 +24,6 @@ app.get('/', (req, res) => {
 });
 
 // routes
-app.use('/api', apiRoutes);
 
 // error handler middleware
 app.use(returnError);
