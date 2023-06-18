@@ -9,7 +9,7 @@
 	},
 	"rewrites": [
 		{
-			"source": "/api/skiddle/(.*)",
+			"source": "/api/skiddle",
 			"destination": "/api/skiddle-api-php/index.php"
 		},
 		{
