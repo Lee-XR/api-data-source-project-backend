@@ -1,6 +1,8 @@
 {
     "require": {
-        "skiddle/skiddle-php-sdk": "^1.1",
+        "skiddle/skiddle-php-sdk": "^1.1"
+    },
+    "require-dev": {
         "vlucas/phpdotenv": "^5.5"
     }
 }
