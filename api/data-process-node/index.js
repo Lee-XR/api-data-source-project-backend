@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
 
-import { router as processingRoutes } from './routes/processingRoute.js';
+import { router as mappingRoutes } from './routes/mappingRoute.js';
 import { returnError } from './middleware/errorHandler.js';
 
 dotenv.config();
@@ -25,7 +25,7 @@ app.get('/', (req, res) => {
 });
 
 // routes
-app.use('/process', processingRoutes);
+app.use('/mapping', mappingRoutes);
 
 // error handler middleware
 app.use(returnError);

@@ -3,4 +3,4 @@ import { mapFields } from '../controllers/mappingController.js';
 
 export const router = express.Router();
 
-router.post('/mapping', mapFields);
+router.post('/:apiName', mapFields);
