@@ -1,15 +1,17 @@
-import { Transform, finished, pipeline } from 'node:stream';
+import { createReadStream } from 'node:fs';
+import { Transform, pipeline } from 'node:stream';
 import { promisify } from 'node:util';
 import { createRequire } from 'node:module';
 import { parse } from 'csv-parse';
 import { stringify } from 'csv-stringify';
-import { createReadStream } from 'node:fs';
+
+import { formatPhoneNumber, removeWhiteSpace } from '../utils/stringUtils.js';
 
 const require = createRequire(import.meta.url);
 const testFields = require('../assets/fieldmaps/test-fields.json');
 const skiddleFields = require('../assets/fieldmaps/Skiddle-Venue-Fields.json');
 
-// Return API data fields
+// Return API data fields for mapping
 function getApiFields(apiName) {
 	switch(apiName) {
 		case 'skiddle':
@@ -29,11 +31,21 @@ function changeFieldNames(dataArray, existingFields, apiName) {
 		const newObj = Object.fromEntries(
 			Object.entries(obj)
 				.map(([key, value]) => {
-					if (apiFields[key]) {
-						if (!fieldHeaders.includes(apiFields[key])) {
-							fieldHeaders.push(apiFields[key]);
+					const newFieldname = apiFields[key];
+					if (newFieldname) {
+						if (!fieldHeaders.includes(newFieldname)) {
+							fieldHeaders.push(newFieldname);
 						}
-						return [apiFields[key], value];
+
+						if (newFieldname === 'venue_pcode') {
+							value = removeWhiteSpace(value);
+						}
+
+						if (newFieldname === 'venue_phone') {
+							value = formatPhoneNumber(value);
+						}
+
+						return [newFieldname, value];
 					}
 					return null;
 				})
@@ -63,7 +75,7 @@ class StreamToObj extends Transform {
 	}
 }
 
-// Transform records to CSV
+// Map records to CSV fields
 class MapFields extends Transform {
 	constructor(apiName) {
 		super({ objectMode: true });
@@ -108,30 +120,34 @@ class ObjToCsv extends Transform {
 		stringify(newArray, {
 			...this.options,
 			header: true,
-			columns: fieldHeaders
+			columns: fieldHeaders,
 		}, (error, data) => {
 			if (error) {
 				console.log(error);
 				callback(error);
 			} else {
-				callback(null, data);
+				this.push(data);
+				callback();
 			}
 		});
 	}
 }
 
-async function mapFields(req, res, next) {
+const allowedApi = ['skiddle'];
+
+export async function mapFields(req, res, next) {
+	if (!allowedApi.includes(req.params.apiName)) {
+		next('Incorrect API. Not allowed to process data.');
+	}
+
 	const streamToObj = new StreamToObj();
 	const mapFields = new MapFields(req.params.apiName);
 	const objToCsv = new ObjToCsv();
 
-	try {
-		const pipe = promisify(pipeline);
-		await pipe(req, streamToObj, mapFields, objToCsv, res);
-	} catch (error) {
-		console.log(error);
-		next(error);
-	}
+	const pipe = promisify(pipeline);
+		await pipe(req, streamToObj, mapFields, objToCsv, res)
+			.catch((error) => {
+				console.log(error);
+				next(error);
+			});
 }
-
-export { mapFields };
