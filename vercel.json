@@ -14,7 +14,7 @@
 		},
 		{
 			"source": "/(.*)",
-			"destination": "/api/data-process-node/"
+			"destination": "/api/data-process-node/index.js"
 		}
 	],
 	"headers": [
