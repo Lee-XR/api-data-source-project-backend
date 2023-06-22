@@ -13,6 +13,10 @@
 			"destination": "/api/skiddle-api-php/index.php"
 		},
 		{
+			"source": "/(.*)/:match*",
+			"destination": "/api/data-process-node/index.js/:match*"
+		},
+		{
 			"source": "/(.*)",
 			"destination": "/api/data-process-node/index.js"
 		}
