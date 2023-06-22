@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { createReadStream } from 'node:fs';
 import { Transform, pipeline } from 'node:stream';
 import { promisify } from 'node:util';
@@ -13,10 +14,10 @@ const skiddleFields = require('../assets/fieldmaps/Skiddle-Venue-Fields.json');
 
 // Return API data fields for mapping
 function getApiFields(apiName) {
-	switch(apiName) {
+	switch (apiName) {
 		case 'skiddle':
 			return skiddleFields;
-		
+
 		default:
 			return testFields;
 	}
@@ -26,7 +27,7 @@ function getApiFields(apiName) {
 function changeFieldNames(dataArray, existingFields, apiName) {
 	const fieldHeaders = [...existingFields];
 	const apiFields = getApiFields(apiName);
-	
+
 	const newArray = dataArray.map((obj) => {
 		const newObj = Object.fromEntries(
 			Object.entries(obj)
@@ -85,7 +86,10 @@ class MapFields extends Transform {
 	_transform(chunk, encoding, callback) {
 		const fields = [];
 		const stream = createReadStream(
-			'../../api/data-process-node/assets/Liverpool_090623.csv'
+			path.resolve(
+				__dirname,
+				'../../assets/Liverpool_090623.csv'
+			)
 		);
 
 		stream
@@ -117,19 +121,23 @@ class ObjToCsv extends Transform {
 	}
 
 	_transform({ newArray, fieldHeaders }, encoding, callback) {
-		stringify(newArray, {
-			...this.options,
-			header: true,
-			columns: fieldHeaders,
-		}, (error, data) => {
-			if (error) {
-				console.log(error);
-				callback(error);
-			} else {
-				this.push(data);
-				callback();
+		stringify(
+			newArray,
+			{
+				...this.options,
+				header: true,
+				columns: fieldHeaders,
+			},
+			(error, data) => {
+				if (error) {
+					console.log(error);
+					callback(error);
+				} else {
+					this.push(data);
+					callback();
+				}
 			}
-		});
+		);
 	}
 }
 
@@ -137,7 +145,7 @@ const allowedApi = ['skiddle'];
 
 export async function mapFields(req, res, next) {
 	if (!allowedApi.includes(req.params.apiName)) {
-	next(new Error('Incorrect API. Not allowed to process data.'));
+		next(new Error('Incorrect API. Not allowed to process data.'));
 	}
 
 	const streamToObj = new StreamToObj();
@@ -145,9 +153,8 @@ export async function mapFields(req, res, next) {
 	const objToCsv = new ObjToCsv();
 
 	const pipe = promisify(pipeline);
-		await pipe(req, streamToObj, mapFields, objToCsv, res)
-			.catch((error) => {
-				console.log(error);
-				next(error);
-			});
+	await pipe(req, streamToObj, mapFields, objToCsv, res).catch((error) => {
+		console.log(error);
+		next(error);
+	});
 }
