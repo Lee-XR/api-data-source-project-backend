@@ -137,7 +137,7 @@ const allowedApi = ['skiddle'];
 
 export async function mapFields(req, res, next) {
 	if (!allowedApi.includes(req.params.apiName)) {
-		next('Incorrect API. Not allowed to process data.');
+	next(new Error('Incorrect API. Not allowed to process data.'));
 	}
 
 	const streamToObj = new StreamToObj();
