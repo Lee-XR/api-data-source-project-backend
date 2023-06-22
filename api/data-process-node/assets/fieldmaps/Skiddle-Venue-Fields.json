@@ -1,0 +1,13 @@
+{
+    "id": "skdl_id",
+    "name": "venue_name",
+    "address": "venue_add_one",
+    "town": "venue_city",
+    "postcode": "venue_pcode",
+    "phone": "venue_phone",
+    "description": "skdl_description",
+    "imageurl": "skdl_imageurl",
+    "latitude": "skdl_latitude",
+    "longitude": "skdl_longitude",
+    "type": "skdl_type"
+}
