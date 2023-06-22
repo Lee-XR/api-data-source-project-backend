@@ -27,7 +27,7 @@
 			]
 		},
 		{
-			"source": "/(.*)",
+			"source": "/:match*",
 			"headers": [
 				{ "key": "Access-Control-Allow-Origin", "value": "https://api-data-source-project.vercel.app" },
 				{ "key": "Access-Control-Allow-Methods", "value": "GET,OPTIONS,POST" },
