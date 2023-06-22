@@ -85,7 +85,7 @@ class MapFields extends Transform {
 	_transform(chunk, encoding, callback) {
 		const fields = [];
 		const stream = createReadStream(
-			'api/data-process-node/assets/Liverpool_090623.csv'
+			'../../api/data-process-node/assets/Liverpool_090623.csv'
 		);
 
 		stream
