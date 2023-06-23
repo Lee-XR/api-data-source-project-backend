@@ -150,8 +150,9 @@ export async function mapFields(req, res, next) {
 	const objToCsv = new ObjToCsv();
 
 	const pipe = promisify(pipeline);
-	await pipe(req, streamToObj, mapFields, objToCsv, res).catch((error) => {
-		console.log(error);
-		next(error);
-	});
+	await pipe(req, streamToObj, mapFields, objToCsv, res)
+		.catch((error) => {
+			console.log(error);
+			next(error);
+		});
 }

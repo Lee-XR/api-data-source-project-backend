@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 
 import { router as mappingRoutes } from './routes/mappingRoute.js';
+import { router as matchingRoutes } from './routes/matchingRoute.js';
 import { returnError } from './middleware/errorHandler.js';
 
 dotenv.config();
@@ -26,6 +27,7 @@ app.get('/', (req, res) => {
 
 // routes
 app.use('/mapping', mappingRoutes);
+app.use('/matching', matchingRoutes);
 
 // error handler middleware
 app.use(returnError);
