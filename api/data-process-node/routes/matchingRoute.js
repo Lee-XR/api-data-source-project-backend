@@ -1,6 +1,6 @@
 import express from 'express';
-import { matchFields } from '../controllers/matchingController';
+import { matchRecords } from '../controllers/matchingController.js';
 
 export const router = express.Router();
 
-router.post('/:apiName', matchFields);
+router.post('/:apiName', matchRecords);

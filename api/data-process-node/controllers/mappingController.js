@@ -9,6 +9,7 @@ import { stringify } from 'csv-stringify';
 import { formatPhoneNumber, removeWhiteSpace } from '../utils/stringUtils.js';
 
 const require = createRequire(import.meta.url);
+const allowedApi = require('../assets/allowedApi.json');
 const testFields = require('../assets/fieldmaps/test-fields.json');
 const skiddleFields = require('../assets/fieldmaps/Skiddle-Venue-Fields.json');
 
@@ -138,15 +139,14 @@ class ObjToCsv extends Transform {
 	}
 }
 
-const allowedApi = ['skiddle'];
-
 export async function mapFields(req, res, next) {
-	if (!allowedApi.includes(req.params.apiName)) {
+	const apiName = req.params.apiName.toLowerCase();
+	if (!allowedApi.includes(apiName)) {
 		next(new Error('Incorrect API. Not allowed to process data.'));
 	}
 
 	const streamToObj = new StreamToObj();
-	const mapFields = new MapFields(req.params.apiName);
+	const mapFields = new MapFields(apiName);
 	const objToCsv = new ObjToCsv();
 
 	const pipe = promisify(pipeline);
