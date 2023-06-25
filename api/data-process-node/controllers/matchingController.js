@@ -5,25 +5,15 @@ import { promisify } from 'node:util';
 import { finished } from 'node:stream/promises';
 import path from 'node:path';
 import { parse } from 'csv-parse';
-import { removeAllSymbols, removeWhiteSpace } from '../utils/stringUtils.js';
+import { stringify } from 'csv-stringify';
+import {
+	removeAllSymbols,
+	removeWhiteSpace,
+	filterWordsFromString,
+} from '../utils/stringUtils.js';
 
 const require = createRequire(import.meta.url);
 const allowedApi = require('../assets/allowedApi.json');
-
-const testRecord = {
-	id: 115852,
-	venue_name: 'Phase One Jacaranda',
-	address: '40 Seel Street',
-	venue_city: 'Liverpool',
-	venue_pcode: 'L14BE',
-	venue_phone: '01513631292',
-	description: '',
-	imageurl: '',
-	latitude: 53.4027351,
-	longitude: -2.9813483,
-	distance: 0.791196,
-	type: 'Nightclub',
-};
 
 // Transform stream input to CSV string
 class StreamToString extends Transform {
@@ -57,7 +47,7 @@ async function getExistingRecords() {
 	);
 
 	existingCsvStream
-		.pipe(parse({ columns: true }))
+		.pipe(parse({ bom: true, columns: true }))
 		.on('data', (record) => {
 			records.push(record);
 		})
@@ -72,72 +62,76 @@ async function getExistingRecords() {
 
 // Filter existing records with similar venue names
 async function matchVenueName(name, existingRecords) {
-	const nameKeywords = removeAllSymbols(name).toLowerCase().split(' ');
+	const nameLowerCased = removeAllSymbols(name).toLowerCase();
+	const filterWords = ['the', 'and', '&'];
+	const nameKeywords = filterWordsFromString(nameLowerCased, filterWords).split(
+		' '
+	);
+	const matchedRecordsId = [];
 
-	const records = await existingRecords
-		.filter((record) => {
-			const venueName = removeAllSymbols(record.venue_name)
-				.toLowerCase()
-				.split(' ');
+	const records = await existingRecords.filter((record) => {
+		const venueName = removeAllSymbols(record.venue_name)
+			.toLowerCase()
+			.split(' ');
 
-			for (const keyword of nameKeywords) {
+		for (const keyword of nameKeywords) {
+			if (keyword !== '') {
 				for (const name of venueName) {
 					if (name === keyword) {
+						matchedRecordsId.push(record.id);
 						return true;
 					}
 				}
 			}
-			return false;
-		})
-		.map((record) => ({ ...record, matched_fields: 'venue_name' }));
+		}
+		return false;
+	});
 
-	return records;
+	return { matchedByVenueName: records, venueNameMatches: matchedRecordsId };
 }
 
 // Filter matched records with same venue city
 async function matchVenueCity(city, matchedRecords) {
 	const cityKeywords = removeAllSymbols(city).toLowerCase().split(' ');
+	const matchedRecordsId = [];
 
 	const records = await matchedRecords.map((record) => {
 		const venueCity = removeAllSymbols(record.venue_city).toLowerCase();
 
 		for (const keyword of cityKeywords) {
 			if (venueCity.includes(cityKeywords)) {
-				return {
-					...record,
-					matched_fields: `${record.matched_fields}, venue_city`,
-				};
+				matchedRecordsId.push(record.id);
 			}
 		}
 		return record;
 	});
 
-	return records;
+	return { matchedByVenueCity: records, venueCityMatches: matchedRecordsId };
 }
 
 // Filter matched records with same postcode
 async function matchVenuePostcode(postcode, matchedRecords) {
 	const postcodeUpperCased = postcode.toUpperCase();
+	const matchedRecordsId = [];
 
 	const records = await matchedRecords.map((record) => {
 		if (record.venue_pcode.toUpperCase() === postcodeUpperCased) {
-			return {
-				...record,
-				matched_fields: `${record.matched_fields}, venue_pcode`,
-			};
+			matchedRecordsId.push(record.id);
 		}
 		return record;
 	});
 
-	return records;
+	return {
+		matchedByVenuePostcode: records,
+		venuePostcodeMatches: matchedRecordsId,
+	};
 }
 
 // Filter matched records with same last 7 phone number characters
 async function matchVenuePhone(phone, matchedRecords) {
-	const phoneLastSevenChars = removeWhiteSpace(phone).substring(
-		phone.length - 7,
-		phone.length
-	);
+	const recordPhone = removeWhiteSpace(phone);
+	const phoneLastSevenChars = recordPhone.substring(recordPhone.length - 7);
+	const matchedRecordsId = [];
 
 	const records = await matchedRecords.map((record) => {
 		const venuePhone = removeWhiteSpace(record.venue_phone);
@@ -147,36 +141,68 @@ async function matchVenuePhone(phone, matchedRecords) {
 		);
 
 		if (phoneLastSevenChars === venuePhoneLastSevenChars) {
-			return {
-				...record,
-				matched_fields: `${record.matched_fields}, venue_phone`,
-			};
+			matchedRecordsId.push(record.id);
 		}
 
 		return record;
 	});
 
-	return records;
+	return { matchedByVenuePhone: records, venuePhoneMatches: matchedRecordsId };
 }
 
-// Compare record fields based on matrix
+// Compare record fields based on fields matrix
 async function compareFields(record, existingRecords) {
 	const name = record.venue_name;
 	const city = record.venue_city;
 	const postcode = record.venue_pcode;
 	const phone = record.venue_phone;
 
-	const matchedRecords = [];
-	const matchedByVenueName = await matchVenueName(name, existingRecords);
-	const matchedByVenueCity = await matchVenueCity(city, matchedByVenueName);
-	const matchedByVenuePostcode = await matchVenuePostcode(postcode, matchedByVenueCity);
-	const matchedByVenuePhone = await matchVenuePhone(phone, matchedByVenuePostcode);
+	const { matchedByVenueName, venueNameMatches } = await matchVenueName(
+		name,
+		existingRecords
+	);
+	const { matchedByVenueCity, venueCityMatches } = await matchVenueCity(
+		city,
+		matchedByVenueName
+	);
+	const { matchedByVenuePostcode, venuePostcodeMatches } =
+		await matchVenuePostcode(postcode, matchedByVenueCity);
+	const { matchedByVenuePhone, venuePhoneMatches } = await matchVenuePhone(
+		phone,
+		matchedByVenuePostcode
+	);
 
-	matchedRecords.push(...matchedByVenuePhone);
+	const matchedFields = {
+		matched_venue_name: venueNameMatches,
+		matched_venue_city: venueCityMatches,
+		matched_venue_postcode: venuePostcodeMatches,
+		matched_venue_phone: venuePhoneMatches,
+	};
 
-	// for (const record of matchedRecords) {
-	// 	console.log(record.venue_name, record.matched_fields);
-	// }
+	let matchedFieldsNum = 0;
+	for (const field in matchedFields) {
+		if (matchedFields[field].length > 0) {
+			matchedFieldsNum++;
+		}
+	}
+	return { matchedFields, matchedFieldsNum };
+}
+
+// Transform object to CSV string
+async function objToCsvString(object, options) {
+	const stringifyOptions = {
+		objectMode: true,
+		header: true,
+		...options,
+	};
+
+	const stringifier = stringify(object, stringifyOptions);
+	let csvString = '';
+	for await (const row of stringifier) {
+		csvString += row;
+	}
+
+	return csvString;
 }
 
 export async function matchRecords(req, res, next) {
@@ -187,18 +213,48 @@ export async function matchRecords(req, res, next) {
 
 	const existingRecords = await getExistingRecords();
 	const streamToString = new StreamToString();
-
-	// Initialise CSV parser & invoke comparison function
 	const csvParser = parse({
+		bom: true,
 		columns: true,
 	});
-	// (async function () {
-	// 	for await (const record of csvParser) {
-	// 		compareFields(record, existingRecords);
-	// 	}
-	// })();
+
 	if (existingRecords) {
-		compareFields(testRecord, existingRecords);
+		(async function () {
+			const recordsZeroMatch = [];
+			const recordsHasMatch = [];
+
+			for await (let record of csvParser) {
+				const { matchedFields, matchedFieldsNum } = await compareFields(
+					record,
+					existingRecords
+				);
+
+				record = {
+					...record,
+					...matchedFields,
+				};
+
+				if (matchedFieldsNum > 0) {
+					recordsHasMatch.push(record);
+				} else {
+					recordsZeroMatch.push(record);
+				}
+			}
+
+			return { recordsZeroMatch, recordsHasMatch };
+		})()
+			.then(({ recordsZeroMatch, recordsHasMatch }) => {
+				Promise.all([objToCsvString(recordsZeroMatch), objToCsvString(recordsHasMatch)])
+					.then(([zeroMatchCsv, hasMatchCsv]) => {
+						res.json({zeroMatchCsv, hasMatchCsv});
+					})
+					.catch((error) => {
+						throw new Error(error);
+					});
+			})
+			.catch((error) => {
+				next(error);
+			});
 	}
 
 	const pipe = promisify(pipeline);
@@ -206,6 +262,4 @@ export async function matchRecords(req, res, next) {
 		console.log(error);
 		next(error);
 	});
-
-	res.json({ success: true });
 }

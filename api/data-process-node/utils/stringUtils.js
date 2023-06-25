@@ -35,4 +35,17 @@ function formatPhoneNumber(phone_number) {
     return phone_number;
 }
 
-export { removeWhiteSpace, removeAllSymbols, formatPhoneNumber }
+// Filter selected words from text string
+function filterWordsFromString(text, filter_array) {
+    let filteredText = text;
+    for (const word of filter_array) {
+        const index = text.indexOf(word);
+        if (index >= 0) {
+            filteredText = filteredText.replaceAll(word, "");
+        }
+    }
+
+    return filteredText;
+}
+
+export { removeWhiteSpace, removeAllSymbols, formatPhoneNumber, filterWordsFromString }

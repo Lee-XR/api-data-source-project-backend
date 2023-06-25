@@ -91,7 +91,7 @@ class MapFields extends Transform {
 		);
 
 		stream
-			.pipe(parse({ toLine: 1 }))
+			.pipe(parse({ bom: true, toLine: 1 }))
 			.on('data', (record) => {
 				fields.push(...record);
 			})
@@ -110,6 +110,8 @@ class MapFields extends Transform {
 			});
 	}
 }
+
+let csvString = '';
 
 // Transform object to CSV string
 class ObjToCsv extends Transform {
@@ -131,6 +133,7 @@ class ObjToCsv extends Transform {
 					console.log(error);
 					callback(error);
 				} else {
+					// csvString = data;
 					this.push(data);
 					callback();
 				}
@@ -151,6 +154,9 @@ export async function mapFields(req, res, next) {
 
 	const pipe = promisify(pipeline);
 	await pipe(req, streamToObj, mapFields, objToCsv, res)
+		// .then(() => {
+		// 	res.json({csv: csvString});
+		// })
 		.catch((error) => {
 			console.log(error);
 			next(error);
