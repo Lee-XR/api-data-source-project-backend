@@ -1,9 +1,9 @@
+import path from 'node:path';
 import { createReadStream } from 'node:fs';
 import { Transform, pipeline } from 'node:stream';
-import { createRequire } from 'node:module';
 import { promisify } from 'node:util';
 import { finished } from 'node:stream/promises';
-import path from 'node:path';
+import { createRequire } from 'node:module';
 import { parse } from 'csv-parse';
 import { stringify } from 'csv-stringify';
 import {
@@ -13,7 +13,7 @@ import {
 } from '../utils/stringUtils.js';
 
 const require = createRequire(import.meta.url);
-const allowedApi = require('../assets/allowedApi.json');
+const allowedApi = require('../assets/apiAllowMatching.json');
 
 // Transform stream input to CSV string
 class StreamToString extends Transform {
@@ -53,7 +53,7 @@ async function getExistingRecords() {
 		})
 		.on('error', (error) => {
 			console.log(error);
-			next(error);
+			throw new Error(error);
 		});
 
 	await finished(existingCsvStream);
@@ -184,7 +184,9 @@ async function compareFields(record, existingRecords) {
 		if (matchedFields[field].length > 0) {
 			matchedFieldsNum++;
 		}
+		matchedFields[field] = matchedFields[field].toString();
 	}
+
 	return { matchedFields, matchedFieldsNum };
 }
 
@@ -211,55 +213,61 @@ export async function matchRecords(req, res, next) {
 		next(new Error('Incorrect API. Not allowed to process data.'));
 	}
 
-	const existingRecords = await getExistingRecords();
+	// const existingRecords = await getExistingRecords();
 	const streamToString = new StreamToString();
 	const csvParser = parse({
 		bom: true,
 		columns: true,
 	});
 
-	if (existingRecords) {
-		(async function () {
-			const recordsZeroMatch = [];
-			const recordsHasMatch = [];
+	await getExistingRecords()
+		.then((existingRecords) => {
+			(async function () {
+				const recordsZeroMatch = [];
+				const recordsHasMatch = [];
 
-			for await (let record of csvParser) {
-				const { matchedFields, matchedFieldsNum } = await compareFields(
-					record,
-					existingRecords
-				);
+				for await (let record of csvParser) {
+					const { matchedFields, matchedFieldsNum } = await compareFields(
+						record,
+						existingRecords
+					);
 
-				record = {
-					...record,
-					...matchedFields,
-				};
+					record = {
+						...record,
+						...matchedFields,
+					};
 
-				if (matchedFieldsNum > 0) {
-					recordsHasMatch.push(record);
-				} else {
-					recordsZeroMatch.push(record);
+					if (matchedFieldsNum > 0) {
+						recordsHasMatch.push(record);
+					} else {
+						recordsZeroMatch.push(record);
+					}
 				}
-			}
 
-			return { recordsZeroMatch, recordsHasMatch };
-		})()
-			.then(({ recordsZeroMatch, recordsHasMatch }) => {
-				Promise.all([objToCsvString(recordsZeroMatch), objToCsvString(recordsHasMatch)])
+				return { recordsZeroMatch, recordsHasMatch };
+			})()
+				.then(({ recordsZeroMatch, recordsHasMatch }) => {
+					Promise.all([
+						objToCsvString(recordsZeroMatch),
+						objToCsvString(recordsHasMatch),
+					])
 					.then(([zeroMatchCsv, hasMatchCsv]) => {
-						res.json({zeroMatchCsv, hasMatchCsv});
+						res.json({ zeroMatchCsv, hasMatchCsv });
 					})
 					.catch((error) => {
-						throw new Error(error);
+						next(error);
 					});
-			})
-			.catch((error) => {
-				next(error);
-			});
-	}
+				})
+				.catch((error) => {
+					next(error);
+				});
+		})
+		.catch((error) => {
+			next(error);
+		});
 
 	const pipe = promisify(pipeline);
 	await pipe(req, streamToString, csvParser).catch((error) => {
-		console.log(error);
 		next(error);
 	});
 }

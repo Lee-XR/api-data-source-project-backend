@@ -5,11 +5,10 @@ import { promisify } from 'node:util';
 import { createRequire } from 'node:module';
 import { parse } from 'csv-parse';
 import { stringify } from 'csv-stringify';
-
 import { formatPhoneNumber, removeWhiteSpace } from '../utils/stringUtils.js';
 
 const require = createRequire(import.meta.url);
-const allowedApi = require('../assets/allowedApi.json');
+const allowedApi = require('../assets/apiAllowMapping.json');
 const testFields = require('../assets/fieldmaps/test-fields.json');
 const skiddleFields = require('../assets/fieldmaps/Skiddle-Venue-Fields.json');
 
@@ -25,7 +24,7 @@ function getApiFields(apiName) {
 }
 
 // Change field names for new records
-function changeFieldNames(dataArray, existingFields, apiName) {
+async function changeFieldNames(dataArray, existingFields, apiName) {
 	const fieldHeaders = [...existingFields];
 	const apiFields = getApiFields(apiName);
 
@@ -51,7 +50,7 @@ function changeFieldNames(dataArray, existingFields, apiName) {
 					}
 					return null;
 				})
-				.filter((pair) => pair !== null)
+				.filter((keypair) => keypair !== null)
 		);
 		return { ...newObj };
 	});
@@ -86,17 +85,23 @@ class MapFields extends Transform {
 
 	_transform(chunk, encoding, callback) {
 		const fields = [];
-		const stream = createReadStream(
-			path.resolve(process.cwd(), 'api', 'data-process-node', 'assets', 'Liverpool_090623.csv')
+		const existingFieldsStream = createReadStream(
+			path.resolve(
+				process.cwd(),
+				'api',
+				'data-process-node',
+				'assets',
+				'Liverpool_090623.csv'
+			)
 		);
 
-		stream
+		existingFieldsStream
 			.pipe(parse({ bom: true, toLine: 1 }))
 			.on('data', (record) => {
 				fields.push(...record);
 			})
-			.on('end', () => {
-				const { newArray, fieldHeaders } = changeFieldNames(
+			.on('end', async () => {
+				const { newArray, fieldHeaders } = await changeFieldNames(
 					chunk,
 					fields,
 					this.apiName
@@ -105,13 +110,10 @@ class MapFields extends Transform {
 				callback();
 			})
 			.on('error', (error) => {
-				console.log(error);
 				callback(error);
 			});
 	}
 }
-
-let csvString = '';
 
 // Transform object to CSV string
 class ObjToCsv extends Transform {
@@ -130,10 +132,8 @@ class ObjToCsv extends Transform {
 			},
 			(error, data) => {
 				if (error) {
-					console.log(error);
 					callback(error);
 				} else {
-					// csvString = data;
 					this.push(data);
 					callback();
 				}
@@ -154,11 +154,7 @@ export async function mapFields(req, res, next) {
 
 	const pipe = promisify(pipeline);
 	await pipe(req, streamToObj, mapFields, objToCsv, res)
-		// .then(() => {
-		// 	res.json({csv: csvString});
-		// })
 		.catch((error) => {
-			console.log(error);
 			next(error);
 		});
 }
