@@ -213,7 +213,12 @@ export async function matchRecords(req, res, next) {
 		next(new Error('Incorrect API. Not allowed to process data.'));
 	}
 
-	// const existingRecords = await getExistingRecords();
+	req.on('readable', () => {
+		if (req.read() === null) {
+			next(new Error('No data provided.'));
+		}
+	});
+
 	const streamToString = new StreamToString();
 	const csvParser = parse({
 		bom: true,
@@ -247,12 +252,15 @@ export async function matchRecords(req, res, next) {
 				return { recordsZeroMatch, recordsHasMatch };
 			})()
 				.then(({ recordsZeroMatch, recordsHasMatch }) => {
+					const zeroMatchCount = recordsZeroMatch.length;
+					const hasMatchCount = recordsHasMatch.length;
+
 					Promise.all([
 						objToCsvString(recordsZeroMatch),
 						objToCsvString(recordsHasMatch),
 					])
 					.then(([zeroMatchCsv, hasMatchCsv]) => {
-						res.json({ zeroMatchCsv, hasMatchCsv });
+						res.json({ zeroMatchCsv, zeroMatchCount, hasMatchCsv, hasMatchCount });
 					})
 					.catch((error) => {
 						next(error);

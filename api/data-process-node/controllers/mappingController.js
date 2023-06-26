@@ -134,7 +134,7 @@ class ObjToCsv extends Transform {
 				if (error) {
 					callback(error);
 				} else {
-					this.push(data);
+					this.push(JSON.stringify({ mappedCsv: data, mappedCount: newArray.length }));
 					callback();
 				}
 			}
