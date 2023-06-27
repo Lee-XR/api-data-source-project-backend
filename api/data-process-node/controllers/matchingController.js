@@ -276,6 +276,7 @@ export async function matchRecords(req, res, next) {
 
 	const pipe = promisify(pipeline);
 	await pipe(req, streamToString, csvParser).catch((error) => {
+		res.status(500).json(error);
 		next(error);
 	});
 }
