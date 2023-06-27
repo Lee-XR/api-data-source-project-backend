@@ -227,21 +227,22 @@ export async function matchRecords(req, res, next) {
 				const recordsHasMatch = [];
 
 				for await (let record of csvParser) {
-					const { matchedFields, matchedFieldsNum } = await compareFields(
-						record,
-						existingRecords
-					);
+					await compareFields(record, existingRecords)
+						.then(({ matchedFields, matchedFieldsNum }) => {
+							record = {
+								...record,
+								...matchedFields,
+							};
 
-					record = {
-						...record,
-						...matchedFields,
-					};
-
-					if (matchedFieldsNum > 0) {
-						recordsHasMatch.push(record);
-					} else {
-						recordsZeroMatch.push(record);
-					}
+							if (matchedFieldsNum > 0) {
+								recordsHasMatch.push(record);
+							} else {
+								recordsZeroMatch.push(record);
+							}
+						})
+						.catch((error) => {
+							next(error);
+						});
 				}
 
 				return { recordsZeroMatch, recordsHasMatch };
@@ -263,11 +264,11 @@ export async function matchRecords(req, res, next) {
 							});
 						})
 						.catch((error) => {
-							throw new Error(error);
+							next(error);
 						});
 				})
 				.catch((error) => {
-					throw new Error(error);
+					next('route');
 				});
 		})
 		.catch((error) => {
@@ -276,7 +277,6 @@ export async function matchRecords(req, res, next) {
 
 	const pipe = promisify(pipeline);
 	await pipe(req, streamToString, csvParser).catch((error) => {
-		res.status(500).json(error);
 		next(error);
 	});
 }
