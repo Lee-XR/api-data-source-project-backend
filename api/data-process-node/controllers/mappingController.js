@@ -9,7 +9,6 @@ import { formatPhoneNumber, removeWhiteSpace } from '../utils/stringUtils.js';
 
 const require = createRequire(import.meta.url);
 const allowedApi = require('../assets/apiAllowMapping.json');
-const testFields = require('../assets/fieldmaps/test-fields.json');
 const skiddleFields = require('../assets/fieldmaps/Skiddle-Venue-Fields.json');
 
 // Return API data fields for mapping
@@ -19,7 +18,7 @@ function getApiFields(apiName) {
 			return skiddleFields;
 
 		default:
-			return testFields;
+			return {};
 	}
 }
 
@@ -71,8 +70,10 @@ class StreamToObj extends Transform {
 	}
 
 	_flush(callback) {
-		this.push(JSON.parse(this.dataString));
-		callback();
+		if (this.dataString.length === 0) {
+			callback(new Error('No data provided.'));
+		}
+		callback(null, JSON.parse(this.dataString));
 	}
 }
 
@@ -101,13 +102,13 @@ class MapFields extends Transform {
 				fields.push(...record);
 			})
 			.on('end', async () => {
-				const { newArray, fieldHeaders } = await changeFieldNames(
-					chunk,
-					fields,
-					this.apiName
-				);
-				this.push({ newArray, fieldHeaders });
-				callback();
+				await changeFieldNames(chunk, fields, this.apiName)
+					.then(({ newArray, fieldHeaders }) => {
+						callback(null, { newArray, fieldHeaders });
+					})
+					.catch((error) => {
+						callback(error);
+					});
 			})
 			.on('error', (error) => {
 				callback(error);
@@ -134,8 +135,10 @@ class ObjToCsv extends Transform {
 				if (error) {
 					callback(error);
 				} else {
-					this.push(JSON.stringify({ mappedCsv: data, mappedCount: newArray.length }));
-					callback();
+					callback(
+						null,
+						JSON.stringify({ mappedCsv: data, mappedCount: newArray.length })
+					);
 				}
 			}
 		);
@@ -153,8 +156,7 @@ export async function mapFields(req, res, next) {
 	const objToCsv = new ObjToCsv();
 
 	const pipe = promisify(pipeline);
-	await pipe(req, streamToObj, mapFields, objToCsv, res)
-		.catch((error) => {
-			next(error);
-		});
+	await pipe(req, streamToObj, mapFields, objToCsv, res).catch((error) => {
+		next(error);
+	});
 }

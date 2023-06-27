@@ -28,8 +28,10 @@ class StreamToString extends Transform {
 	}
 
 	_flush(callback) {
-		this.push(this.csvString);
-		callback();
+		if (this.csvString.length === 0) {
+			callback(new Error('No data provided.'));
+		}
+		callback(null, this.csvString);
 	}
 }
 
@@ -52,7 +54,6 @@ async function getExistingRecords() {
 			records.push(record);
 		})
 		.on('error', (error) => {
-			console.log(error);
 			throw new Error(error);
 		});
 
@@ -150,7 +151,7 @@ async function matchVenuePhone(phone, matchedRecords) {
 	return { matchedByVenuePhone: records, venuePhoneMatches: matchedRecordsId };
 }
 
-// Compare record fields based on fields matrix
+// Compare record fields based on selected fields
 async function compareFields(record, existingRecords) {
 	const name = record.venue_name;
 	const city = record.venue_city;
@@ -213,12 +214,6 @@ export async function matchRecords(req, res, next) {
 		next(new Error('Incorrect API. Not allowed to process data.'));
 	}
 
-	req.on('readable', () => {
-		if (req.read() === null) {
-			next(new Error('No data provided.'));
-		}
-	});
-
 	const streamToString = new StreamToString();
 	const csvParser = parse({
 		bom: true,
@@ -259,15 +254,20 @@ export async function matchRecords(req, res, next) {
 						objToCsvString(recordsZeroMatch),
 						objToCsvString(recordsHasMatch),
 					])
-					.then(([zeroMatchCsv, hasMatchCsv]) => {
-						res.json({ zeroMatchCsv, zeroMatchCount, hasMatchCsv, hasMatchCount });
-					})
-					.catch((error) => {
-						next(error);
-					});
+						.then(([zeroMatchCsv, hasMatchCsv]) => {
+							res.json({
+								zeroMatchCsv,
+								zeroMatchCount,
+								hasMatchCsv,
+								hasMatchCount,
+							});
+						})
+						.catch((error) => {
+							throw new Error(error);
+						});
 				})
 				.catch((error) => {
-					next(error);
+					throw new Error(error);
 				});
 		})
 		.catch((error) => {
