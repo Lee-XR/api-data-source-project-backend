@@ -9,83 +9,87 @@ import { formatPhoneNumber, removeWhiteSpace } from '../utils/stringUtils.js';
 
 const require = createRequire(import.meta.url);
 const allowedApi = require('../assets/apiAllowMapping.json');
-const skiddleFields = require('../assets/fieldmaps/Skiddle-Venue-Fields.json');
+const skiddleFieldMap = require('../assets/fieldmaps/Skiddle-Venue-Fields.json');
 
 // Return API data fields for mapping
-function getApiFields(apiName) {
+async function getApiFieldMap(apiName) {
 	switch (apiName) {
 		case 'skiddle':
-			return skiddleFields;
-
+			return skiddleFieldMap;
 		default:
-			return {};
+			throw new Error('No API detected. Cannot process data.');
 	}
 }
 
 // Change field names for new records
-async function changeFieldNames(dataArray, existingFields, apiName) {
-	const fieldHeaders = [...existingFields];
-	const apiFields = getApiFields(apiName);
+async function changeFieldNames(inputDataArray, existingFieldHeaders, apiName) {
+	const fieldHeaders = [...existingFieldHeaders];
+	const apiFieldMap = await getApiFieldMap(apiName);
 
-	const newArray = dataArray.map((obj) => {
-		const newObj = Object.fromEntries(
-			Object.entries(obj)
+	const changedDataArray = inputDataArray.map((record) => {
+		const changedRecord = Object.fromEntries(
+			Object.entries(record)
 				.map(([key, value]) => {
-					const newFieldname = apiFields[key];
-					if (newFieldname) {
-						if (!fieldHeaders.includes(newFieldname)) {
-							fieldHeaders.push(newFieldname);
+					const newFieldName = apiFieldMap[key];
+					if (newFieldName) {
+						if (!fieldHeaders.includes(newFieldName)) {
+							fieldHeaders.push(newFieldName);
 						}
 
-						if (newFieldname === 'venue_pcode') {
+						if (newFieldName === 'venue_pcode') {
 							value = removeWhiteSpace(value);
 						}
 
-						if (newFieldname === 'venue_phone') {
+						if (newFieldName === 'venue_phone') {
 							value = formatPhoneNumber(value);
 						}
 
-						return [newFieldname, value];
+						return [newFieldName, value];
 					}
 					return null;
 				})
 				.filter((keypair) => keypair !== null)
 		);
-		return { ...newObj };
+
+		return changedRecord;
 	});
 
-	return { newArray, fieldHeaders };
+	return { changedDataArray, fieldHeaders };
 }
 
 // Transform stream input to array object
-class StreamToObj extends Transform {
+class StreamToObject extends Transform {
 	constructor(options) {
 		super({ ...options, objectMode: true });
-		this.dataString = '';
+		this.dataObject = '';
 	}
 
 	_transform(chunk, encoding, callback) {
-		this.dataString += chunk;
+		this.dataObject += chunk;
 		callback();
 	}
 
 	_flush(callback) {
-		if (this.dataString.length === 0) {
+		if (this.dataObject.length === 0) {
 			callback(new Error('No data provided.'));
+		} else {
+			const objectData = JSON.parse(this.dataObject);
+			callback(null, objectData);
 		}
-		callback(null, JSON.parse(this.dataString));
 	}
 }
 
 // Map records to CSV fields
 class MapFields extends Transform {
-	constructor(apiName) {
-		super({ objectMode: true });
+	constructor(apiName, options) {
+		super({ ...options, objectMode: true });
 		this.apiName = apiName;
+		this.inputDataObject = null;
+		this.fieldHeaders = [];
 	}
 
 	_transform(chunk, encoding, callback) {
-		const fields = [];
+		this.inputDataObject = chunk;
 		const existingFieldsStream = createReadStream(
 			path.resolve(
 				process.cwd(),
@@ -99,16 +103,20 @@ class MapFields extends Transform {
 		existingFieldsStream
 			.pipe(parse({ bom: true, toLine: 1 }))
 			.on('data', (record) => {
-				fields.push(...record);
+				this.fieldHeaders.push(...record);
 			})
-			.on('end', async () => {
-				await changeFieldNames(chunk, fields, this.apiName)
-					.then(({ newArray, fieldHeaders }) => {
-						callback(null, { newArray, fieldHeaders });
-					})
-					.catch((error) => {
-						callback(error);
-					});
+			.on('end', () => {
+				(async () => {
+					const { changedDataArray, fieldHeaders } = await changeFieldNames(
+						this.inputDataObject,
+						this.fieldHeaders,
+						this.apiName
+					);
+
+					callback(null, { changedDataArray, fieldHeaders });
+				})().catch((error) => {
+					callback(error);
+				});
 			})
 			.on('error', (error) => {
 				callback(error);
@@ -116,47 +124,53 @@ class MapFields extends Transform {
 	}
 }
 
-// Transform object to CSV string
-class ObjToCsv extends Transform {
-	constructor(options) {
-		super({ ...options, objectMode: true });
-		this.options = { ...options, objectMode: true };
-	}
-
-	_transform({ newArray, fieldHeaders }, encoding, callback) {
-		stringify(
-			newArray,
-			{
-				...this.options,
-				header: true,
-				columns: fieldHeaders,
-			},
-			(error, data) => {
-				if (error) {
-					callback(error);
-				} else {
-					callback(
-						null,
-						JSON.stringify({ mappedCsv: data, mappedCount: newArray.length })
-					);
-				}
-			}
-		);
-	}
-}
-
 export async function mapFields(req, res, next) {
 	const apiName = req.params.apiName.toLowerCase();
 	if (!allowedApi.includes(apiName)) {
-		next(new Error('Incorrect API. Not allowed to process data.'));
+		return next(new Error('Incorrect API. Not allowed to process data.'));
 	}
 
-	const streamToObj = new StreamToObj();
+	const streamToObject = new StreamToObject();
 	const mapFields = new MapFields(apiName);
-	const objToCsv = new ObjToCsv();
+
+	// Transform object to CSV string
+	async function ObjectToCsv(incomingStream) {
+		const changedDataArray = [];
+		const fieldHeaders = [];
+
+		incomingStream
+			.on('readable', function () {
+				let row;
+				while ((row = this.read()) !== null) {
+					changedDataArray.push(...row.changedDataArray);
+					fieldHeaders.push(...row.fieldHeaders);
+				}
+			})
+			.on('error', (error) => {
+				next(error);
+			})
+			.on('end', () => {
+				stringify(
+					changedDataArray,
+					{
+						objectMode: true,
+						header: true,
+						columns: fieldHeaders,
+					},
+					(error, data) => {
+						if (error) {
+							next(error);
+						}
+
+						res.json({ mappedCsv: data, mappedCount: changedDataArray.length });
+					}
+				);
+			});
+	}
 
 	const pipe = promisify(pipeline);
-	await pipe(req, streamToObj, mapFields, objToCsv, res).catch((error) => {
+	await pipe(req, streamToObject, mapFields, ObjectToCsv)
+	.catch((error) => {
 		next(error);
 	});
 }

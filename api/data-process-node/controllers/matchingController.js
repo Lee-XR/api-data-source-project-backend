@@ -30,8 +30,9 @@ class StreamToString extends Transform {
 	_flush(callback) {
 		if (this.csvString.length === 0) {
 			callback(new Error('No data provided.'));
+		} else {
+			callback(null, this.csvString);
 		}
-		callback(null, this.csvString);
 	}
 }
 
@@ -211,7 +212,7 @@ async function objToCsvString(object, options) {
 export async function matchRecords(req, res, next) {
 	const apiName = req.params.apiName.toLowerCase();
 	if (!allowedApi.includes(apiName)) {
-		next(new Error('Incorrect API. Not allowed to process data.'));
+		return next(new Error('Incorrect API. Not allowed to process data.'));
 	}
 
 	const streamToString = new StreamToString();
@@ -266,7 +267,7 @@ export async function matchRecords(req, res, next) {
 						.catch((error) => {
 							next(error);
 						});
-				})
+					})
 				.catch((error) => {
 					next('route');
 				});
