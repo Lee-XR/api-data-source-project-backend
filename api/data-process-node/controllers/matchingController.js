@@ -45,7 +45,7 @@ async function getExistingRecords() {
 			'api',
 			'data-process-node',
 			'assets',
-			'Liverpool_090623.csv'
+			'VenueRecordsData.csv'
 		)
 	);
 

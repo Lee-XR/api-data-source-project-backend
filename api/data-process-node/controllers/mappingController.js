@@ -70,10 +70,10 @@ class StreamToObject extends Transform {
 	}
 
 	_flush(callback) {
-		if (this.dataObject.length === 0) {
+		const objectData = JSON.parse(this.dataObject);
+		if (objectData.length === 0) {
 			callback(new Error('No data provided.'));
 		} else {
-			const objectData = JSON.parse(this.dataObject);
 			callback(null, objectData);
 		}
 	}
@@ -96,7 +96,7 @@ class MapFields extends Transform {
 				'api',
 				'data-process-node',
 				'assets',
-				'Liverpool_090623.csv'
+				'VenueRecordsData.csv'
 			)
 		);
 
