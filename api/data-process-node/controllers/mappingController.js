@@ -16,6 +16,8 @@ async function getApiFieldMap(apiName) {
 	switch (apiName) {
 		case 'skiddle':
 			return skiddleFieldMap;
+		case 'noapi':
+			return skiddleFieldMap;
 		default:
 			throw new Error('No API detected. Cannot process data.');
 	}
