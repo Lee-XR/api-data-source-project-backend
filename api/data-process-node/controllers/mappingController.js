@@ -1,5 +1,3 @@
-import path from 'node:path';
-import { createReadStream } from 'node:fs';
 import { Transform, pipeline } from 'node:stream';
 import { promisify } from 'node:util';
 import { createRequire } from 'node:module';
@@ -63,20 +61,22 @@ async function changeFieldNames(inputDataArray, existingFieldHeaders, apiName) {
 class StreamToObject extends Transform {
 	constructor(options) {
 		super({ ...options, objectMode: true });
-		this.dataObject = '';
+		this.dataString = '';
 	}
 
 	_transform(chunk, encoding, callback) {
-		this.dataObject += chunk;
+		this.dataString += chunk;
 		callback();
 	}
 
 	_flush(callback) {
-		const objectData = JSON.parse(this.dataObject);
-		if (objectData.length === 0) {
+		const parsedData = JSON.parse(this.dataString);
+		if (parsedData.latestCsv.length === 0) {
+			callback(new Error('Latest CSV data not provided.'));
+		} else if (parsedData.inputRecords.length === 0) {
 			callback(new Error('No data provided.'));
 		} else {
-			callback(null, objectData);
+			callback(null, parsedData);
 		}
 	}
 }
@@ -90,22 +90,18 @@ class MapFields extends Transform {
 		this.fieldHeaders = [];
 	}
 
-	_transform(chunk, encoding, callback) {
-		this.inputDataObject = chunk;
-		const existingFieldsStream = createReadStream(
-			path.resolve(
-				process.cwd(),
-				'api',
-				'data-process-node',
-				'tmp',
-				'VenueRecordsData.csv'
-			)
-		);
-
-		existingFieldsStream
-			.pipe(parse({ bom: true, toLine: 1 }))
-			.on('data', (record) => {
-				this.fieldHeaders.push(...record);
+	_transform({ inputRecords, latestCsv }, encoding, callback) {
+		this.inputDataObject = inputRecords;
+		const csvParser = parse(latestCsv, {
+			bom: true,
+			to_line: 1,
+		});
+		csvParser
+			.on('readable', () => {
+				let row;
+				while ((row = csvParser.read()) !== null) {
+					this.fieldHeaders.push(...row);
+				}
 			})
 			.on('end', () => {
 				(async () => {
@@ -171,8 +167,7 @@ export async function mapFields(req, res, next) {
 	}
 
 	const pipe = promisify(pipeline);
-	await pipe(req, streamToObject, mapFields, ObjectToCsv)
-	.catch((error) => {
+	await pipe(req, streamToObject, mapFields, ObjectToCsv).catch((error) => {
 		next(error);
 	});
 }

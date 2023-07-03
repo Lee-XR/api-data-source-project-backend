@@ -2,7 +2,6 @@ import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
 
-import { updateCsv } from './controllers/updateCsvController.js';
 import { router as mappingRoutes } from './routes/mappingRoute.js';
 import { router as matchingRoutes } from './routes/matchingRoute.js';
 import { returnError } from './middleware/errorHandler.js';
@@ -27,7 +26,6 @@ app.get('/', (req, res) => {
 });
 
 // routes
-app.post('/update-csv', updateCsv);
 app.use('/mapping', mappingRoutes);
 app.use('/matching', matchingRoutes);
 

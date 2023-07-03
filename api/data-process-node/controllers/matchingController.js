@@ -1,8 +1,5 @@
-import path from 'node:path';
-import { createReadStream } from 'node:fs';
 import { Transform, pipeline } from 'node:stream';
 import { promisify } from 'node:util';
-import { finished } from 'node:stream/promises';
 import { createRequire } from 'node:module';
 import { parse } from 'csv-parse';
 import { stringify } from 'csv-stringify';
@@ -15,51 +12,37 @@ import {
 const require = createRequire(import.meta.url);
 const allowedApi = require('../assets/apiAllowMatching.json');
 
-// Transform stream input to CSV string
-class StreamToString extends Transform {
-	constructor(options) {
-		super({ ...options, objectMode: true });
-		this.csvString = '';
+// Transform CSV string to object
+async function csvStringToObj(string, options) {
+	const records = [];
+	const csvParser = parse(string, {
+		...options,
+		bom: true,
+		columns: true,
+	});
+
+	for await (const record of csvParser) {
+		records.push(record);
 	}
 
-	_transform(chunk, encoding, callback) {
-		this.csvString += chunk;
-		callback();
-	}
-
-	_flush(callback) {
-		if (this.csvString.length === 0) {
-			callback(new Error('No data provided.'));
-		} else {
-			callback(null, this.csvString);
-		}
-	}
+	return records;
 }
 
-// Get existing CSV records
-async function getExistingRecords() {
-	const records = [];
-	const existingCsvStream = createReadStream(
-		path.resolve(
-			process.cwd(),
-			'api',
-			'data-process-node',
-			'tmp',
-			'VenueRecordsData.csv'
-		)
-	);
+// Transform object to CSV string
+async function objToCsvString(object, options) {
+	const stringifyOptions = {
+		objectMode: true,
+		header: true,
+		...options,
+	};
 
-	existingCsvStream
-		.pipe(parse({ bom: true, columns: true }))
-		.on('data', (record) => {
-			records.push(record);
-		})
-		.on('error', (error) => {
-			throw new Error(error);
-		});
+	const stringifier = stringify(object, stringifyOptions);
+	let csvString = '';
+	for await (const row of stringifier) {
+		csvString += row;
+	}
 
-	await finished(existingCsvStream);
-	return records;
+	return csvString;
 }
 
 // Filter existing records with similar venue names
@@ -192,21 +175,67 @@ async function compareFields(record, existingRecords) {
 	return { matchedFields, matchedFieldsNum };
 }
 
-// Transform object to CSV string
-async function objToCsvString(object, options) {
-	const stringifyOptions = {
-		objectMode: true,
-		header: true,
-		...options,
-	};
-
-	const stringifier = stringify(object, stringifyOptions);
-	let csvString = '';
-	for await (const row of stringifier) {
-		csvString += row;
+// Transform stream input to CSV string
+class StreamToObj extends Transform {
+	constructor(options) {
+		super({ ...options, objectMode: true });
+		this.dataString = '';
 	}
 
-	return csvString;
+	_transform(chunk, encoding, callback) {
+		this.dataString += chunk;
+		callback();
+	}
+
+	_flush(callback) {
+		const parsedData = JSON.parse(this.dataString);
+		if (parsedData.latestCsv.length === 0) {
+			callback(new Error('Latest CSV data not provided.'));
+		}
+		if (parsedData.mappedCsv.length === 0) {
+			callback(new Error('No data provided.'));
+		}
+
+		csvStringToObj(parsedData.latestCsv)
+			.then((latestCsv) => {
+				callback(null, { latestCsv, mappedCsv: parsedData.mappedCsv });
+			})
+			.catch((error) => {
+				callback(error);
+			});
+	}
+}
+
+// Filter latest and mapped CSV data to separate pipes
+class FilterCsvType extends Transform {
+	constructor(type, options) {
+		super({ ...options, objectMode: true });
+		this.type = type;
+		this.csvRecords;
+		this.isError = false;
+	}
+
+	_transform(chunk, encoding, callback) {
+		switch (this.type) {
+			case 'latest':
+				this.csvRecords = chunk.latestCsv;
+				break;
+
+			case 'mapped':
+				this.csvRecords = chunk.mappedCsv;
+				break;
+
+			default:
+				this.isError = true;
+				break;
+		}
+
+		if (this.isError) {
+			callback(new Error('Invalid CSV type provided.'));
+		} else {
+			callback(null, this.csvRecords);
+		}
+	}
 }
 
 export async function matchRecords(req, res, next) {
@@ -215,18 +244,30 @@ export async function matchRecords(req, res, next) {
 		return next(new Error('Incorrect API. Not allowed to process data.'));
 	}
 
-	const streamToString = new StreamToString();
+	const streamToObj = new StreamToObj();
+	const latestCsvFilter = new FilterCsvType('latest');
+	const mappedCsvFilter = new FilterCsvType('mapped');
 	const csvParser = parse({
 		bom: true,
 		columns: true,
 	});
 
-	await getExistingRecords()
-		.then((existingRecords) => {
-			(async function () {
-				const recordsZeroMatch = [];
-				const recordsHasMatch = [];
+	async function processOutput(incomingStream) {
+		const existingRecords = [];
+		const recordsZeroMatch = [];
+		const recordsHasMatch = [];
 
+		incomingStream
+			.on('readable', function () {
+				let record;
+				while ((record = this.read()) !== null) {
+					existingRecords.push(...record);
+				}
+			})
+			.on('error', (error) => {
+				next(error);
+			})
+			.on('end', async () => {
 				for await (let record of csvParser) {
 					await compareFields(record, existingRecords)
 						.then(({ matchedFields, matchedFieldsNum }) => {
@@ -246,38 +287,38 @@ export async function matchRecords(req, res, next) {
 						});
 				}
 
-				return { recordsZeroMatch, recordsHasMatch };
-			})()
-				.then(({ recordsZeroMatch, recordsHasMatch }) => {
-					const zeroMatchCount = recordsZeroMatch.length;
-					const hasMatchCount = recordsHasMatch.length;
+				const zeroMatchCount = recordsZeroMatch.length;
+				const hasMatchCount = recordsHasMatch.length;
 
-					Promise.all([
-						objToCsvString(recordsZeroMatch),
-						objToCsvString(recordsHasMatch),
-					])
-						.then(([zeroMatchCsv, hasMatchCsv]) => {
-							res.json({
-								zeroMatchCsv,
-								zeroMatchCount,
-								hasMatchCsv,
-								hasMatchCount,
-							});
-						})
-						.catch((error) => {
-							next(error);
+				Promise.all([
+					objToCsvString(recordsZeroMatch),
+					objToCsvString(recordsHasMatch),
+				])
+					.then(([zeroMatchCsv, hasMatchCsv]) => {
+						res.json({
+							zeroMatchCsv,
+							zeroMatchCount,
+							hasMatchCsv,
+							hasMatchCount,
 						});
 					})
-				.catch((error) => {
-					next('route');
-				});
+					.catch((error) => {
+						next(error);
+					});
+			});
+	}
+
+	const pipe = promisify(pipeline);
+	await pipe(req, streamToObj)
+		.then(() => {
+			pipe(streamToObj, latestCsvFilter, processOutput).catch((error) =>
+				next(error)
+			);
+			pipe(streamToObj, mappedCsvFilter, csvParser).catch((error) =>
+				next(error)
+			);
 		})
 		.catch((error) => {
 			next(error);
 		});
-
-	const pipe = promisify(pipeline);
-	await pipe(req, streamToString, csvParser).catch((error) => {
-		next(error);
-	});
 }
