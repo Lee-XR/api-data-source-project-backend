@@ -27,7 +27,7 @@ app.get('/', (req, res) => {
 });
 
 // routes
-app.post('/update-csv', updateCsv);
+// app.post('/update-csv', updateCsv);
 app.use('/mapping', mappingRoutes);
 app.use('/matching', matchingRoutes);
 
