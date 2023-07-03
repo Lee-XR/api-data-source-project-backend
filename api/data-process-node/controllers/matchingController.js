@@ -1,4 +1,4 @@
-import { Transform, pipeline } from 'node:stream';
+import { PassThrough, Transform, pipeline } from 'node:stream';
 import { promisify } from 'node:util';
 import { createRequire } from 'node:module';
 import { parse } from 'csv-parse';
@@ -245,6 +245,7 @@ export async function matchRecords(req, res, next) {
 	}
 
 	const streamToObj = new StreamToObj();
+	const csvDataPassThrough = new PassThrough({objectMode: true});
 	const latestCsvFilter = new FilterCsvType('latest');
 	const mappedCsvFilter = new FilterCsvType('mapped');
 	const csvParser = parse({
@@ -309,14 +310,16 @@ export async function matchRecords(req, res, next) {
 	}
 
 	const pipe = promisify(pipeline);
-	await pipe(req, streamToObj)
+	await pipe(req, streamToObj, csvDataPassThrough)
 		.then(() => {
-			pipeline(streamToObj, mappedCsvFilter, csvParser, (error) => {
-				if (error) next(error);
-			});
-			pipeline(streamToObj, latestCsvFilter, processOutput, (error) => {
-				if (error) next(error);
-			});
+			pipe(csvDataPassThrough, latestCsvFilter, processOutput).catch((error) => next(error));
+			pipe(csvDataPassThrough, mappedCsvFilter, csvParser).catch((error) => next(error));
+			// pipe(streamToObj, mappedCsvFilter, csvParser, (error) => {
+			// 	if (error) next(error);
+			// });
+			// pipeline(streamToObj, latestCsvFilter, processOutput, (error) => {
+			// 	if (error) next(error);
+			// });
 		})
 		.catch((error) => {
 			next(error);
