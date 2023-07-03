@@ -97,7 +97,7 @@ class MapFields extends Transform {
 				process.cwd(),
 				'api',
 				'data-process-node',
-				'assets',
+				'tmp',
 				'VenueRecordsData.csv'
 			)
 		);

@@ -4,8 +4,8 @@ import { pipeline } from 'node:stream';
 import { promisify } from 'node:util';
 
 export async function updateCsv(req, res, next) {
-    const filePath = path.resolve(process.cwd(), 'api', 'data-process-node', 'assets', 'VenueRecordsData.csv');
-    const fileDestination = createWriteStream(filePath);
+    // const filePath = path.resolve(process.cwd(), 'api', 'data-process-node', 'tmp', 'VenueRecordsData.csv');
+    const fileDestination = createWriteStream('/tmp/VenueRecordsData.csv');
     
     const pipe = promisify(pipeline);
     await pipe(req, fileDestination)

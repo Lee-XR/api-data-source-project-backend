@@ -44,7 +44,7 @@ async function getExistingRecords() {
 			process.cwd(),
 			'api',
 			'data-process-node',
-			'assets',
+			'tmp',
 			'VenueRecordsData.csv'
 		)
 	);
