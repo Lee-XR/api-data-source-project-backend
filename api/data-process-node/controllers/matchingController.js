@@ -45,136 +45,6 @@ async function objToCsvString(object, options) {
 	return csvString;
 }
 
-// Filter existing records with similar venue names
-async function matchVenueName(name, existingRecords) {
-	const nameLowerCased = removeAllSymbols(name).toLowerCase();
-	const filterWords = ['the', 'and', '&'];
-	const nameKeywords = filterWordsFromString(nameLowerCased, filterWords).split(
-		' '
-	);
-	const matchedRecordsId = [];
-
-	const records = await existingRecords.filter((record) => {
-		const venueName = removeAllSymbols(record.venue_name)
-			.toLowerCase()
-			.split(' ');
-
-		for (const keyword of nameKeywords) {
-			if (keyword !== '') {
-				for (const name of venueName) {
-					if (name === keyword) {
-						matchedRecordsId.push(record.id);
-						return true;
-					}
-				}
-			}
-		}
-		return false;
-	});
-
-	return { matchedByVenueName: records, venueNameMatches: matchedRecordsId };
-}
-
-// Filter matched records with same venue city
-async function matchVenueCity(city, matchedRecords) {
-	const cityKeywords = removeAllSymbols(city).toLowerCase().split(' ');
-	const matchedRecordsId = [];
-
-	const records = await matchedRecords.map((record) => {
-		const venueCity = removeAllSymbols(record.venue_city).toLowerCase();
-
-		for (const keyword of cityKeywords) {
-			if (venueCity.includes(cityKeywords)) {
-				matchedRecordsId.push(record.id);
-			}
-		}
-		return record;
-	});
-
-	return { matchedByVenueCity: records, venueCityMatches: matchedRecordsId };
-}
-
-// Filter matched records with same postcode
-async function matchVenuePostcode(postcode, matchedRecords) {
-	const postcodeUpperCased = postcode.toUpperCase();
-	const matchedRecordsId = [];
-
-	const records = await matchedRecords.map((record) => {
-		if (record.venue_pcode.toUpperCase() === postcodeUpperCased) {
-			matchedRecordsId.push(record.id);
-		}
-		return record;
-	});
-
-	return {
-		matchedByVenuePostcode: records,
-		venuePostcodeMatches: matchedRecordsId,
-	};
-}
-
-// Filter matched records with same last 7 phone number characters
-async function matchVenuePhone(phone, matchedRecords) {
-	const recordPhone = removeWhiteSpace(phone);
-	const phoneLastSevenChars = recordPhone.substring(recordPhone.length - 7);
-	const matchedRecordsId = [];
-
-	const records = await matchedRecords.map((record) => {
-		const venuePhone = removeWhiteSpace(record.venue_phone);
-		const venuePhoneLastSevenChars = venuePhone.substring(
-			venuePhone.length - 7,
-			venuePhone.length
-		);
-
-		if (phoneLastSevenChars === venuePhoneLastSevenChars) {
-			matchedRecordsId.push(record.id);
-		}
-
-		return record;
-	});
-
-	return { matchedByVenuePhone: records, venuePhoneMatches: matchedRecordsId };
-}
-
-// Compare record fields based on selected fields
-async function compareFields(record, existingRecords) {
-	const name = record.venue_name;
-	const city = record.venue_city;
-	const postcode = record.venue_pcode;
-	const phone = record.venue_phone;
-
-	const { matchedByVenueName, venueNameMatches } = await matchVenueName(
-		name,
-		existingRecords
-	);
-	const { matchedByVenueCity, venueCityMatches } = await matchVenueCity(
-		city,
-		matchedByVenueName
-	);
-	const { matchedByVenuePostcode, venuePostcodeMatches } =
-		await matchVenuePostcode(postcode, matchedByVenueCity);
-	const { matchedByVenuePhone, venuePhoneMatches } = await matchVenuePhone(
-		phone,
-		matchedByVenuePostcode
-	);
-
-	const matchedFields = {
-		matched_venue_name: venueNameMatches,
-		matched_venue_city: venueCityMatches,
-		matched_venue_postcode: venuePostcodeMatches,
-		matched_venue_phone: venuePhoneMatches,
-	};
-
-	let matchedFieldsNum = 0;
-	for (const field in matchedFields) {
-		if (matchedFields[field].length > 0) {
-			matchedFieldsNum++;
-		}
-		matchedFields[field] = matchedFields[field].toString();
-	}
-
-	return { matchedFields, matchedFieldsNum };
-}
-
 // Transform stream input to CSV string
 class StreamToObj extends Transform {
 	constructor(options) {
@@ -311,12 +181,16 @@ export async function matchRecords(req, res, next) {
 	const pipe = promisify(pipeline);
 	await pipe(req, streamToObj)
 		.then(() => {
-			pipeline(streamToObj, latestCsvFilter, processOutput).catch((error) =>
-				next(error)
-			);
-			pipeline(streamToObj, mappedCsvFilter, csvParser).catch((error) =>
-				next(error)
-			);
+			pipeline(streamToObj, latestCsvFilter, processOutput, (error) => {
+				if (error) {
+					next(error);
+				}
+			});
+			pipeline(streamToObj, mappedCsvFilter, csvParser, (error) => {
+				if (error) {
+					next(error);
+				}
+			});
 		})
 		.catch((error) => {
 			next(error);
