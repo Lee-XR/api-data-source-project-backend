@@ -311,10 +311,10 @@ export async function matchRecords(req, res, next) {
 	const pipe = promisify(pipeline);
 	await pipe(req, streamToObj)
 		.then(() => {
-			pipe(streamToObj, latestCsvFilter, processOutput, (error) => {
+			pipeline(streamToObj, latestCsvFilter, processOutput, (error) => {
 				if (error) next(error);
 			});
-			pipe(streamToObj, mappedCsvFilter, csvParser, (error) => {
+			pipeline(streamToObj, mappedCsvFilter, csvParser, (error) => {
 				if (error) next(error);
 			});
 		})
