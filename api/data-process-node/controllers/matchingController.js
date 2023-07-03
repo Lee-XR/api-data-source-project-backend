@@ -310,19 +310,15 @@ export async function matchRecords(req, res, next) {
 	}
 
 	const pipe = promisify(pipeline);
-	// await pipe(req, streamToObj, csvDataPassThrough)
-	// 	.catch((error) => {
+	await pipe(req, streamToObj, csvDataPassThrough).catch((error) => next(error));
+	pipe(csvDataPassThrough, mappedCsvFilter, csvParser).catch((error) => next(error));
+	pipe(csvDataPassThrough, latestCsvFilter, processOutput).catch((error) => next(error));
+	// pipeline(req, streamToObj, csvDataPassThrough, (error) => {
+	// 	if (error) {
 	// 		next(error);
-	// 	});
-	// req.pipe(streamToObj).on('error', (error) => next(error)).pipe(csvDataPassThrough).on('end', () => {
-		
-	// })
-	pipeline(req, streamToObj, csvDataPassThrough, (error) => {
-		if (error) {
-			next(error);
-		} else {
-			pipe(csvDataPassThrough, mappedCsvFilter, csvParser).catch((error) => next(error));
-			pipe(csvDataPassThrough, latestCsvFilter, processOutput).catch((error) => next(error));
-		}
-	});
+	// 	} else {
+	// 		pipe(csvDataPassThrough, mappedCsvFilter, csvParser).catch((error) => next(error));
+	// 		pipe(csvDataPassThrough, latestCsvFilter, processOutput).catch((error) => next(error));
+	// 	}
+	// });
 }
