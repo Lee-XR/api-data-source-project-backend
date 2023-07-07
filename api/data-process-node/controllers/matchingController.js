@@ -10,7 +10,8 @@ import {
 } from '../utils/stringUtils.js';
 
 const require = createRequire(import.meta.url);
-const allowedApi = require('../assets/apiAllowMatching.json');
+const allowedApi = require('../assets/matching-allowed-api.json');
+const filterWords = require('../assets/words-filter.json');
 
 // Transform CSV string to object
 async function csvStringToObj(string, options) {
@@ -48,7 +49,6 @@ async function objToCsvString(object, options) {
 // Filter existing records with similar venue names
 async function matchVenueName(name, existingRecords) {
 	const nameLowerCased = removeAllSymbols(name).toLowerCase();
-	const filterWords = ['the', 'and', '&'];
 	const nameKeywords = filterWordsFromString(nameLowerCased, filterWords).split(
 		' '
 	);
