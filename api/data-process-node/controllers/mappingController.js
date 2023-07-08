@@ -7,15 +7,15 @@ import { formatPhoneNumber, removeWhiteSpace } from '../utils/stringUtils.js';
 
 const require = createRequire(import.meta.url);
 const allowedApi = require('../assets/mapping-allowed-api.json');
-const skiddleFields = require('../assets/fieldmaps/skiddle-venue-fields.json');
+const skiddleFieldMap = require('../assets/skiddle-venue-fields.json');
 
 // Return API data fields for mapping
 async function getApiFieldMap(apiName) {
 	switch (apiName) {
 		case 'skiddle':
-			return skiddleFields;
+			return skiddleFieldMap;
 		case 'noapi':
-			return skiddleFields;
+			return skiddleFieldMap;
 		default:
 			throw new Error('No API detected. Cannot process data.');
 	}
