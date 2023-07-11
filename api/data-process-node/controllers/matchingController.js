@@ -10,8 +10,8 @@ import {
 } from '../utils/stringUtils.js';
 
 const require = createRequire(import.meta.url);
-const allowedApi = require('../assets/matching-allowed-api.json');
-const filterWords = require('../assets/words-filter.json');
+const allowedApi = require('../assets/json/matching-allowed-api.json');
+const filterWords = require('../assets/json/words-filter.json');
 
 // Transform CSV string to object
 async function csvStringToObj(string, options) {

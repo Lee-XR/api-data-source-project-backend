@@ -6,8 +6,8 @@ import { stringify } from 'csv-stringify';
 import { formatPhoneNumber, removeWhiteSpace } from '../utils/stringUtils.js';
 
 const require = createRequire(import.meta.url);
-const allowedApi = require('../assets/mapping-allowed-api.json');
-const skiddleFieldMap = require('../assets/fieldmaps/skiddle-venue-fields.json');
+const allowedApi = require('../assets/json/mapping-allowed-api.json');
+const skiddleFieldMap = require('../assets/json/skiddle-venue-fields.json');
 
 // Return API data fields for mapping
 async function getApiFieldMap(apiName) {
